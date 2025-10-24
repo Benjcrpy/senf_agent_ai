@@ -14,8 +14,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY streamlit_app.py /app/streamlit_app.py
 
 EXPOSE 8501
-
-# Health endpoint available in Streamlit
 HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
   CMD curl -fsS http://127.0.0.1:8501/_stcore/health || exit 1
 
