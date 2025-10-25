@@ -147,7 +147,7 @@ Output ONLY one fenced code block:
 </html>
 """
 
-===== HTML extraction =====
+# ===== HTML extraction =====
 CODE_RE = re.compile(r"html\s*(.+?)\s*", re.DOTALL | re.IGNORECASE)
 def extract_html_from_text(text: str) -> str | None:
 m = CODE_RE.search(text or "")
