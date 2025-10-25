@@ -160,7 +160,7 @@ components.html(html, height=650, scrolling=True)
 return True
 return False
 
-===== Ollama / OpenAI-compatible calls =====
+# ===== Ollama / OpenAI-compatible calls =====
 def _ollama_generate(prompt: str) -> str:
 url = f"{api_base}/api/generate"
 payload = {
@@ -197,7 +197,7 @@ crit = gen(SYSTEM + "\n\n" + CRIT.format(plan=draft))
 final = gen(SYSTEM + "\n\n" + REV.format(plan=draft, improvements=crit))
 return draft, crit, final
 
-===== Main logic =====
+# ===== Main logic =====
 if run:
 if not goal.strip():
 st.warning("Enter a goal first.")
