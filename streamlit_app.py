@@ -145,113 +145,111 @@ Output ONLY one fenced code block:
     </script>
   </body>
 </html>
-"""
 
 # ===== HTML extraction =====
-CODE_RE = re.compile(r"html\s*(.+?)\s*", re.DOTALL | re.IGNORECASE)
+CODE_RE = re.compile(r"```html\s*(.+?)\s*```", re.DOTALL | re.IGNORECASE)
+
 def extract_html_from_text(text: str) -> str | None:
-m = CODE_RE.search(text or "")
-return m.group(1).strip() if m else None
+    m = CODE_RE.search(text or "")
+    return m.group(1).strip() if m else None
 
 def render_html_preview(text: str):
-html = extract_html_from_text(text)
-if html:
-components.html(html, height=650, scrolling=True)
-return True
-return False
+    html = extract_html_from_text(text)
+    if html:
+        components.html(html, height=650, scrolling=True)
+        return True
+    return False
 
 # ===== Ollama / OpenAI-compatible calls =====
 def _ollama_generate(prompt: str) -> str:
-url = f"{api_base}/api/generate"
-payload = {
-"model": model,
-"prompt": prompt,
-"stream": False,
-"options": {"temperature": temperature, "num_predict": max_tokens},
-}
-r = requests.post(url, json=payload, timeout=180)
-r.raise_for_status()
-data = r.json()
-return data.get("response") or json.dumps(data)
+    url = f"{api_base}/api/generate"
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": temperature, "num_predict": max_tokens},
+    }
+    r = requests.post(url, json=payload, timeout=180)
+    r.raise_for_status()
+    data = r.json()
+    return data.get("response") or json.dumps(data)
 
 def _openai_v1(prompt: str) -> str:
-url = f"{api_base}/v1/chat/completions"
-payload = {
-"model": model,
-"messages": [{"role": "user", "content": prompt}],
-"temperature": temperature,
-"max_tokens": max_tokens,
-"stream": False,
-}
-r = requests.post(url, json=payload, timeout=180)
-r.raise_for_status()
-data = r.json()
-return data["choices"][0]["message"]["content"]
+    url = f"{api_base}/v1/chat/completions"
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": False,
+    }
+    r = requests.post(url, json=payload, timeout=180)
+    r.raise_for_status()
+    data = r.json()
+    return data["choices"][0]["message"]["content"]
 
 def gen(prompt: str) -> str:
-return _openai_v1(prompt) if use_openai_v1 else _ollama_generate(prompt)
+    return _openai_v1(prompt) if use_openai_v1 else _ollama_generate(prompt)
 
 def self_evolving(goal_text: str):
-draft = gen(SYSTEM + "\n\n" + TASK.format(goal=goal_text))
-crit = gen(SYSTEM + "\n\n" + CRIT.format(plan=draft))
-final = gen(SYSTEM + "\n\n" + REV.format(plan=draft, improvements=crit))
-return draft, crit, final
+    draft = gen(SYSTEM + "\n\n" + TASK.format(goal=goal_text))
+    crit  = gen(SYSTEM + "\n\n" + CRIT.format(plan=draft))
+    final = gen(SYSTEM + "\n\n" + REV.format(plan=draft, improvements=crit))
+    return draft, crit, final
 
 # ===== Main logic =====
 if run:
-if not goal.strip():
-st.warning("Enter a goal first.")
-st.stop()
+    if not goal.strip():
+        st.warning("Enter a goal first.")
+        st.stop()
 
-sql
-Copy code
-col_left, col_right = st.columns([3, 2])
-want_ui = any(k in goal.lower() for k in [
-    "website", "web app", "todo app", "to-do app", "landing page", "frontend", "html"
-])
+    col_left, col_right = st.columns([3, 2])
+    want_ui = any(k in goal.lower() for k in [
+        "website", "web app", "todo app", "to-do app", "landing page", "frontend", "html"
+    ])
 
-if want_ui:
-    with st.status("Generating website…", expanded=True) as s:
-        html_text = gen(UI_SYSTEM + "\n\n" + UI_TASK)
-        s.update(label="Done!", state="complete")
-
-    with col_left:
-        st.subheader("Raw HTML Output")
-        st.code(html_text, language="html")
-
-    with col_right:
-        st.subheader("Live Preview")
-        if not render_html_preview(html_text):
-            st.info("No HTML block detected. Try again or lower temperature.")
-
-else:
-    if mode.startswith("Self-Evolving"):
-        with st.status("Running self-evolving agent…", expanded=True) as s:
-            draft, crit, final = self_evolving(goal.strip())
+    if want_ui:
+        with st.status("Generating website…", expanded=True) as s:
+            html_text = gen(UI_SYSTEM + "\n\n" + UI_TASK)
             s.update(label="Done!", state="complete")
 
         with col_left:
-            st.subheader("✅ Final Plan")
-            st.markdown(final)
-            tab1, tab2 = st.tabs(["📝 Draft", "🔍 Critique"])
-            with tab1:
-                st.markdown(draft)
-            with tab2:
-                st.markdown(crit)
+            st.subheader("Raw HTML Output")
+            st.code(html_text, language="html")
 
         with col_right:
-            st.subheader("Preview")
-            render_html_preview(final)
+            st.subheader("Live Preview")
+            if not render_html_preview(html_text):
+                st.info("No HTML block detected. Try again or lower temperature.")
 
     else:
-        with st.status("Running single pass…", expanded=True) as s:
-            out = gen(SYSTEM + "\n\n" + TASK.format(goal=goal.strip()))
-            s.update(label="Done!", state="complete")
+        if mode.startswith("Self-Evolving"):
+            with st.status("Running self-evolving agent…", expanded=True) as s:
+                draft, crit, final = self_evolving(goal.strip())
+                s.update(label="Done!", state="complete")
 
-        with col_left:
-            st.subheader("✅ Output")
-            st.markdown(out)
+            with col_left:
+                st.subheader("✅ Final Plan")
+                st.markdown(final)
+                tab1, tab2 = st.tabs(["📝 Draft", "🔍 Critique"])
+                with tab1:
+                    st.markdown(draft)
+                with tab2:
+                    st.markdown(crit)
 
-        with col_right:
-            st.subheader("Preview")
-            render_html_preview(out)
+            with col_right:
+                st.subheader("Preview")
+                render_html_preview(final)
+
+        else:
+            with st.status("Running single pass…", expanded=True) as s:
+                out = gen(SYSTEM + "\n\n" + TASK.format(goal=goal.strip()))
+                s.update(label="Done!", state="complete")
+
+            with col_left:
+                st.subheader("✅ Output")
+                st.markdown(out)
+
+            with col_right:
+                st.subheader("Preview")
+                render_html_preview(out)
